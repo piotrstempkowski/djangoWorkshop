@@ -1,137 +1,236 @@
 from django.shortcuts import render, redirect
-from .models import RoomReservation
+from django.views import View
+from django.http import Http404
+from .models import RoomReservation, ConferenceRoom
 import datetime
-# Create your views here.
-def base_view(request):
-    return render(request, 'exercise/base.html', {})
 
-from .models import ConferenceRoom
-def add_conference_room_view(request):
-    if request.method == 'GET':
-        return render(request, "exercise/add_conf_room.html")
-    else:
+# Create your views here.
+class HomeView(View):
+    def get(self, request):
+        return render(request, "exercise/base.html", {})
+
+    def post(self, request):
+        raise Http404
+
+
+class AddRoomView(View):
+    def get(self, request):
+        return render(request, "exercise/add_room.html")
+
+    def post(self, request):
         name = request.POST.get("room-name")
         capacity = request.POST.get("capacity")
         capacity = int(capacity) if capacity else 0
         projector = request.POST.get("projector") == "on"
+
         if not name:
-            return render(request, "exercise/add_conf_room.html", context={"error": "Name of conference room incorrect."})
-        if capacity <= 0 :
-            return render(request, "exercise/add_conf_room.html", context={"error": "Capacity of coference room must be positive"})
+            return render(
+                request,
+                "exercise/add_room.html",
+                context={"error": "Room must have a name!"},
+            )
+        if capacity <= 0:
+            return render(
+                request,
+                "add_room.html",
+                context={"error": "Room capacity must be greater then 0!"},
+            )
         if ConferenceRoom.objects.filter(name=name).first():
-            return render(request, "exercise/add_conf_room.html", context={"error": "Name of conference room already exists in database."})
-        ConferenceRoom.objects.create(name=name, capacity=capacity, projector_availability = projector)
+            return render(
+                request,
+                "add_room.html",
+                context={"error": "Room name is already taken!"},
+            )
+
+        ConferenceRoom.objects.create(
+            name=name, capacity=capacity, projector_availability=projector
+        )
         return redirect("room-list")
-# obsuzyc przypadek post
 
 
-def room_list_view(request):
-    if request.method == 'GET':
+class RoomListView(View):
+    def get(self, request):
         rooms = ConferenceRoom.objects.all()
         return render(request, "exercise/room.html", context={"rooms": rooms})
 
 
-def delete_room(request, id):
-    if request.method == 'GET':
-        ConferenceRoom.objects.get(id=id).delete()
-        return redirect("room-list")
+class DeleteRoomView(View):
+    def get(self, request, room_id):
+        try:
+            room = ConferenceRoom.objects.get(id=room_id)
+            room.delete()
+            return redirect("room-list")
+        except ConferenceRoom.DoesNotExist:
+            raise Http404
 
 
-def modify_room(request, id):
-    if request.method == 'GET':
-        room = ConferenceRoom.objects.get(id=id)
-        return render(request, "exercise/delete_room.html", context={"room": room})
-    else:
-        room = ConferenceRoom.objects.get(id=id)
-        name= request.POST.get("room-name")
+class ModifyRoomView(AddRoomView):
+    def get(self, request, room_id):
+        room = ConferenceRoom.objects.get(id=room_id)
+        return render(request, "exercise/modify_room.html", context={"room": room})
+
+    def post(self, request, room_id):
+        room = ConferenceRoom.objects.get(id=room_id)
+        name = request.POST.get("room-name")
         capacity = request.POST.get("capacity")
         capacity = int(capacity) if capacity else 0
-        projector = request.POST.get("projector") == 'on'
+        projector = request.POST.get("projector") == "on"
+
         if not name:
-            return render(request,"exercise/modify_room.html",context={"error": "Name room is required."})
+            return render(
+                request,
+                "exercise/modify_room.html",
+                context={"error": "Room must have a name!"},
+            )
+
         if capacity <= 0:
-            return render(request, "exercise/modify-room.html", context={"error": "Room capacity must be postive"})
-        if ConferenceRoom.objects.filter(name=name).first() and room.name != name:
-            return render(request, 'exercise/modify_room.html', context={'error': "Conference room name can't duplicate."})
+            return render(
+                request,
+                "exercise/modify_room.html",
+                context={"error": "Capacity must be greater then 0."},
+            )
+
+        if name != room.name and ConferenceRoom.objects.filter(name=name).first():
+            return render(
+                request,
+                "exercise/modify_room.html",
+                context={"error": "Room name is taken!"},
+            )
+
         room.name = name
         room.capacity = capacity
         room.projector_availability = projector
         room.save()
         return redirect("room-list")
 
-def room_reservatation_view(request, room_id):
-    if request.method == 'GET':
+
+class ReservationView(View):
+    def get(self, request, room_id):
         room = ConferenceRoom.objects.get(id=room_id)
         return render(request, "exercise/reserve_room.html", context={"room": room})
-    else:
+
+    def post(self, request, room_id):
         room = ConferenceRoom.objects.get(id=room_id)
         date = request.POST.get("reservation-date")
         comment = request.POST.get("comment")
-        if RoomReservation.objects.filter(room_id=room, date=date):
-            return render(request, "reserve_room.html", context={"error":"Room is already reserved."})
+
+        if RoomReservation.objects.filter(room=room, date=date):
+            return render(
+                request,
+                "exercise/reserve_room.html",
+                context={"error": "Room is already reserved"},
+            )
+
         if date < str(datetime.date.today()):
-            return render(request, "reserve_room.html", context={"error": "Date cannot be in the past"})
-        RoomReservation.objects.create(room_id=room, date=date, comment=comment)
+            return render(
+                request,
+                "exercise/reserve_room.html",
+                context={"error": "Date cannot be in past!"},
+            )
+
+        RoomReservation.objects.create(room=room, date=date, comment=comment)
         return redirect("room-list")
 
-def reservation_view(request, room_id):
-    if request.method =='GET':
-        room = ConferenceRoom.objects.get(id=room_id)
-        reservations = room.roomreservation_set.filter(date__gte=str(datetime.date.today())).order_by("date")
-        return render(request, "exercise/reservations.html", context={"room": room,
-                                                                      "reservations": reservations,})
 
-def room_availability_view(request):
-    if request.method=='GET':
-        rooms = ConferenceRoom.objects.all() # pobieram dane do salach
-        for room in rooms: # iteruje się po pokojach
-            reservation_dates = [reservation.date for reservation in room.roomreservation_set.all()] # dla każej sali wyciągam daty kiedy jest zajea
+class RoomDetailView(View):
+    def get(self, request, room_id):
+        room = ConferenceRoom.objects.get(id=room_id)
+        reservations = room.reservation_set.filter(
+            date__gte=str(datetime.date.today())
+        ).order_by("date")
+        return render(
+            request,
+            "exercise/reserve_room.html",
+            context={"reservations": reservations},
+        )
+
+
+class RoomsAvailabilityView(View):
+    def get(self, request):
+        rooms = ConferenceRoom.objects.all()
+        for room in rooms:
+            reservation_dates = [
+                reservation.date for reservation in room.reservation_set.all()
+            ]
             room.reserved = datetime.date.today() in reservation_dates
-        return render(request, "exercise/rooms_availability.html", context={"rooms": rooms})
 
-def reservation_form_view(request, room_id):
-    if request.method =='GET':
-            room = ConferenceRoom.objects.get(id=room_id)
-            reservations = room.roomreservation_set.filter(date__gte=str(datetime.date.today())).order_by('date')
-            return render(request, "exercise/reservation_form.html", context={"room": room, "reservations": reservations})
+        return render(
+            request, "exercise/room_availability.html", context={"rooms": rooms}
+        )
 
-    if request.method =='POST':
+
+class ReservationsView(View):
+    def get(self, request, room_id):
         room = ConferenceRoom.objects.get(id=room_id)
-        date = request.POST.get("exercise/reservation-date")
+        reservations = room.reservation_set.filter(
+            date__gte=str(datetime.date.today())
+        ).order_by("date")
+        return render(
+            request,
+            "exercise/reservations.html",
+            context={"reservations": reservations, "room": room},
+        )
+
+    def post(self, request, room_id):
+        room = ConferenceRoom.objects.get(id=room_id)
+        date = request.POST.get("reservation-date")
         comment = request.POST.get("comment")
 
-        reservations = room.roomreservation_set.filter(date__gte=str(datetime.date.today())).order_by('date')
+        reservations = room.reservation_set.filter(
+            date__gte=str(datetime.date.today())
+        ).order_by("date")
 
-        if RoomReservation.objects.filter(room_id=room, date=date):
-            return render(request, "exercise/reservation_form.html", context={"room": room,
-                                                                    "reservations": reservations,
-                                                                    "error": "Sala jest już zarezerwowana!"})
+        if RoomReservation.objects.filter(room=room, date=date):
+            return render(
+                request,
+                "exercise/reservations.html",
+                context={
+                    "room": room,
+                    "reservations": reservations,
+                    "error": "Room is already taken",
+                },
+            )
+
         if date < str(datetime.date.today()):
-            return render(request, "exercise/reservation_form.html", context={"room": room,
-                                                                    "reservations": reservations,
-                                                                    "error": "Data jest z przeszłości!"})
+            return render(
+                request,
+                "exercise/reservations.html",
+                context={
+                    "room": room,
+                    "reservations": reservations,
+                    "error": "Date cannot be in past!",
+                },
+            )
 
-        RoomReservation.objects.create(room_id=room, date=date, comment=comment)
-        return redirect("room-list")
+        RoomReservation.objects.create(room=room, date=date, comment=comment)
+        return redirect("exercise/reservations.html")
 
-def room_search_view(request):
-    if request.method == 'GET':
 
-        name = request.POST.get('room-name')
-        capacity = request.POST.get('capacity')
+class RoomSearch(View):
+    def get(self, request):
+        name = request.GET.get("room-name")
+        capacity = request.GET.get("capacity")
         capacity = int(capacity) if capacity else 0
-        projector = request.POST.get('projector') == 'On'
+        projector = request.GET.get("projector") == "on"
 
         rooms = ConferenceRoom.objects.all()
         if projector:
-            rooms = rooms.filter(projector_availability=projector)
+            rooms = rooms.filer(projector_availability=projector)
+
         if capacity:
             rooms = rooms.filter(capacity__gte=capacity)
+
         if name:
-            rooms = rooms.filter(name__contains=name)
+            rooms.filter(name__contains=name)
+
         for room in rooms:
-            reservation_dates= [reservation.date for reservation in room.roomreservation_set.all()]
+            reservation_dates = [
+                reservation.date for reservation in room.reservation_set.all()
+            ]
             room.reserved = str(datetime.date.today()) in reservation_dates
 
-    return render(request,"exercise/room_search.html", context={"rooms": rooms,
-                                                                "date": datetime.date.today()})
+        return render(
+            request,
+            "exercise/room_search.html",
+            context={"rooms": rooms, "date": datetime.date.today()},
+        )

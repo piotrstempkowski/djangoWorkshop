@@ -9,11 +9,12 @@ class ConferenceRoom(models.Model):
     capacity = models.PositiveIntegerField()
     projector_availability = models.BooleanField(default=False)
 
+
 class RoomReservation(models.Model):
-# Jedna sali może mieć wiele całodniowych rezerwacji
-    room_id = models.ForeignKey(ConferenceRoom, on_delete=models.CASCADE)
+    # Jedna sali może mieć wiele całodniowych rezerwacji
+    room = models.ForeignKey(ConferenceRoom, on_delete=models.CASCADE)
     date = models.DateField()
     comment = models.TextField(null=True)
-# Id sali połączona z data rezerwacji była unikalna
+    # Id sali połączona z data rezerwacji była unikalna
     class Meta:
-        unique_together = ('room_id', 'date')
+        unique_together = ("room", "date")

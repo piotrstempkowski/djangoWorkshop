@@ -15,28 +15,39 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from django.urls import re_path
 from exercise.views import (
-base_view,
-add_conference_room_view,
-room_list_view,
-delete_room,
-modify_room,
-room_reservatation_view,
-reservation_view,
-room_availability_view,
-reservation_form_view,
-room_search_view,)
+    HomeView,
+    AddRoomView,
+    RoomListView,
+    DeleteRoomView,
+    ModifyRoomView,
+    ReservationView,
+    RoomDetailView,
+    RoomsAvailabilityView,
+    ReservationsView,
+    RoomSearch,
+)
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path("base/", base_view, name="base"),
-    path("room/new/", add_conference_room_view, name="add-room"),
-    path("", room_list_view, name="room-list"),
-    path("room/delete/<int:id>/", delete_room, name="delete-room"),
-    path("room/modify/<int:id>/", modify_room, name="modify_room"),
-    path("room/reserve/<int:room_id>/", room_reservatation_view, name="reserve_room"),
-    path("room/reservation/<int:room_id>/", reservation_view, name="reservation"),
-    path("rooms/availability", room_availability_view, name="rooms", ),
-    path("room/reservation-form/<int:room_id>", reservation_form_view, name="reservation_form"),
-    path("room/search", room_search_view, name="room-search"),
+    path("admin/", admin.site.urls),
+    path("", HomeView.as_view(), name="base"),
+    path("room/new/", AddRoomView.as_view(), name="add-room"),
+    path("rooms/", RoomListView.as_view(), name="room-list"),
+    path("room/delete/<int:room_id>/", DeleteRoomView.as_view(), name="delete-room"),
+    path("room/modify/<int:room_id>/", ModifyRoomView.as_view(), name="modify_room"),
+    path("room/reserve/<int:room_id>/", ReservationView.as_view(), name="reserve_room"),
+    path(
+        "room/reservation/<int:room_id>/", RoomDetailView.as_view(), name="reservation"
+    ),
+    path(
+        "rooms/availability",
+        RoomsAvailabilityView.as_view(),
+        name="rooms",
+    ),
+    path(
+        "room/reservation-form/<int:room_id>",
+        ReservationsView.as_view,
+        name="reservation_form",
+    ),
+    path("room/search", RoomSearch.as_view(), name="room-search"),
 ]
