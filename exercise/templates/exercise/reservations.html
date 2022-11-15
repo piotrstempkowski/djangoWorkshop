@@ -1,0 +1,43 @@
+{% extends 'exercise/base.html' %}
+{% block content %}
+<!-- Form -->
+<div class="card">
+  <div class="card-body">
+      {% csrf_token %}
+      <h2>Room name:{{ room.name }}</h2>
+    <p>Room capacity: {{ room.capacity }}</p>
+    <p>Projector availability:
+    {% if room.projector_availability %}
+      <span style="color: green;">&#9745;</span>
+    {% else %}
+      <span style="color: red";>&#9745;</span>
+    {% endif %}
+    </p>
+  </div>
+</div>
+
+<table class="table table-bordered">
+  <caption>List of reservation</caption>
+  <thead>
+    <tr>
+      <th scope="col">Room id</th>
+      <th scope="col">Comment</th>
+      <th scope="col">Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for reservation in reservations %}
+    <tr>
+      <td>{{ room.id }}</td>
+      <td>{{ reservation.comment }}</td>
+      <td>{{ reservation.date }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<a href="/room/modify/" class="badge badge-primary">Edit room</a>
+<a href="/room/delete/" class="badge badge-primary">Delete room</a>
+<a href="/room/reserve" class="badge badge-primary">Reserve room</a>
+
+{% endblock %}

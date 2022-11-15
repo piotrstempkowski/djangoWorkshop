@@ -1,0 +1,72 @@
+{% extends 'exercise/base.html' %}
+{% block content %}
+<table class="table">
+  <thead>
+    <tr class="d-flex">
+      <th scope="col" class="col-1">#</th>
+      <th scope="col" class="col-2">Nazwa</th>
+      <th scope="col" class="col-1">Pojemność</th>
+      <th scope="col" class="col-2">Dostępność</th>
+      <th scope="col" class="col-5" colspan="4">Dostępność rzutnika</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for room in rooms %}
+    <tr class="d-flex">
+      <th scope="row" class="col-1">{{ room.id }}</th>
+      <td class="col-2">
+        <a href="/room/{{ room.id }}/">{{ room.name }}</a>
+      </td>
+      <td class="col-1">{{ room.capacity }}</td>
+      {% if room.reserved %}
+        <td class="col-2" style="color:red;">Zarezerwowana</td>
+      {% else %}
+        <td class="col-2" style="color:green;">Dostępna</td>
+      {% endif %}
+      {% if room.projector_availability %}
+        <td class="col-2" style="color:green;">&#9745;</td>
+      {% else %}
+        <td class="col-2" style="color:red;">&#9746;</td>
+      {% endif %}
+      <td class="col-1">
+        <a href="/room/modify/{{ room.id }}/">edytuj</a>
+      </td>
+      <td class="col-1">
+        <a href="/room/delete/{{ room.id }}/">usuń</a>
+      </td>
+      <td class="col-1">
+        <a href="/room/reserve/{{ room.id }}/">zarezerwuj</a>
+      </td>
+    </tr>
+    {% empty %}
+      <tr><td colspan="6">Brak dostępnych sal</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<br>
+<!-- Form -->
+<h3>Wyszukiwanie</h3>
+<div class="card">
+  <div class="card-body">
+    <form action="/search" method="GET">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="room-name">Nazwa sali</label>
+        <input type="text" class="form-control" id="room-name" aria-describedby="room-name-help" placeholder="Nazwa sali" name="room-name">
+      </div>
+      <div class="form-group">
+        <label for="capacity">Minimalna pojemność sali</label>
+        <input type="number" step="1" class="form-control" id="capacity" placeholder="10" name="capacity">
+      </div>
+
+      <div class="form-check">
+        <input type="checkbox" class="form-check-input" name="projector" id="projector">
+        <label class="form-check-label" for="projector">Dostępność rzutnika</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Szukaj</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
